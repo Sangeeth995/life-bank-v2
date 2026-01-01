@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+<title>Life Bank — Time as Currency</title>
+
+<!-- PWA manifest -->
+<link rel="manifest" href="manifest.json" />
+
+<style>
+  :root{
+    --bg:#060606; --gold:#ffd36b; --muted:#8a8a8a; --card:#0f0f10; --accent:#00d27a;
+    --glass: rgba(255,255,255,0.03);
+    --shadow: 0 6px 24px rgba(0,0,0,0.6);
+    --mono: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  html,body{height:100%; margin:0; background:linear-gradient(180deg,#040404,#0b0b0b); font-family:var(--mono); color:var(--gold);}
+  .wrap{max-width:920px;margin:28px auto;padding:22px;}
+  .top{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+  }
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{
+    width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,#0b0c0f,var(--card));display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);
+    border:1px solid rgba(255,215,0,0.05);
+  }
+  .logo svg{width:34px;height:34px}
+  h1{font-size:18px;margin:0;color:var(--gold);letter-spacing:0.6px}
+  .subtitle{color:var(--muted);font-size:12px;margin-top:4px}
+
+  .card{
+    margin-top:20px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));
+    border-radius:14px;padding:20px;box-shadow:var(--shadow);border:1px solid rgba(255,215,0,0.06)
+  }
+
+  .balance-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+  .balance-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:2px}
+  .balance{
+    font-size:44px;font-weight:700;letter-spacing:1px;color:#ffffff;
+    text-shadow:0 6px 18px rgba(0,0,0,0.6);
+  }
+  .balance small{font-size:14px;color:var(--muted);font-weight:600;margin-left:8px}
+
+  .controls{display:flex;gap:10px;align-items:center;margin-top:18px;flex-wrap:wrap;}
+  .btn {
+    background:transparent;border:1px solid rgba(255,255,255,0.06);padding:10px 14px;border-radius:10px;color:var(--gold);
+  }
+  .btn.primary{background:linear-gradient(90deg,#271a00,#3b2200);color:#fff;border-color:rgba(255,215,0,0.14)}
+  .muted{color:var(--muted);font-size:13px}
+
+  /* settings modal */
+  .settings{
+    margin-top:18px;background:var(--card);border-radius:12px;padding:14px;border:1px solid rgba(255,255,255,0.03);
+  }
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  label{font-size:13px;color:var(--muted);min-width:120px}
+  input[type="number"], input[type="date"], select, input[type="time"]{
+    background:#070707;border:1px solid rgba(255,255,255,0.03);color:#fff;padding:10px;border-radius:8px;min-width:160px;
+  }
+
+  .history{margin-top:18px;color:var(--muted);font-size:14px}
+  .history .item{padding:8px 0;border-bottom:1px dashed rgba(255,255,255,0.02)}
+
+  /* responsive */
+  @media (max-width:540px){
+    .balance{font-size:34px}
+    .logo{width:48px;height:48px}
+  }
+
+  footer{margin-top:18px;color:var(--muted);font-size:12px;text-align:center}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">
+        <div class="logo" title="Life Bank">
+          <!-- simple coin icon -->
+          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="32" cy="32" r="28" fill="url(#g)"/>
+            <defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="#ffd36b"/><stop offset="1" stop-color="#ffb84d"/></linearGradient></defs>
+          </svg>
+        </div>
+        <div>
+          <h1>Life Bank</h1>
+          <div class="subtitle">Time as currency — Hours left until age 100</div>
+        </div>
+      </div>
+
+      <div>
+        <button class="btn primary" id="installBtn" style="display:none">Install</button>
+        <button class="btn" id="shareBtn">Share</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="balance-row">
+        <div>
+          <div class="balance-label">Life Balance</div>
+          <div id="balance" class="balance">Loading…</div>
+          <div class="muted" id="subtext">Starting from 8:00 PM today</div>
+        </div>
+        <div style="text-align:right">
+          <div class="muted">Today’s Burn</div>
+          <div style="font-weight:700;font-size:20px;color:var(--accent)" id="todayBurn">0.00h</div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn" id="pauseBtn">Pause Ticker</button>
+        <button class="btn" id="resetBtn">Reset Start (8:00 PM)</button>
+        <button class="btn" id="settingsToggle">Settings</button>
+        <div class="muted" style="margin-left:auto">Tap to copy balance</div>
+      </div>
+
+      <div class="settings" id="settings" style="display:none">
+        <div style="font-weight:700;margin-bottom:6px">Settings</div>
+
+        <div class="row" style="margin-top:6px">
+          <label>Birthdate</label>
+          <input type="date" id="birthdate">
+        </div>
+
+        <div class="row" style="margin-top:8px">
+          <label>Start time</label>
+          <input type="time" id="starttime" value="20:00">
+        </div>
+
+        <div class="row" style="margin-top:8px">
+          <label>Start age</label>
+          <input type="number" id="startage" min="0" value="31">
+          <label style="margin-left:6px">Life expectancy</label>
+          <input type="number" id="lifeexpect" min="1" value="100">
+        </div>
+
+        <div style="margin-top:10px">
+          <button class="btn primary" id="saveSettings">Save</button>
+          <button class="btn" id="cancelSettings">Cancel</button>
+        </div>
+      </div>
+
+      <div class="history" id="history">
+        <div style="font-weight:700;margin-bottom:8px;color:var(--gold)">Hour Transactions</div>
+        <div id="historyList">
+          <div class="item">No transactions yet — keep the app open to log hourly transactions.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <footer>Built-in PWA demo • You can publish this to GitHub Pages to install on phone</footer>
+  </div>
+
+<script>
+/* ========== Core settings & state =========== */
+const DEFAULT_TOTAL_HOURS = 604854; // if you prefer fixed hours; we'll compute from birthdate if provided
+let paused = false;
+let installPromptEvent = null;
+
+/* Utility */
+const $ = id => document.getElementById(id);
+
+/* Load saved settings or defaults */
+const saved = JSON.parse(localStorage.getItem('lifebank_v1') || '{}');
+const settings = {
+  birthdate: saved.birthdate || '',
+  starttime: saved.starttime || '20:00',
+  startage: Number(saved.startage ?? 31),
+  lifeexpect: Number(saved.lifeexpect ?? 100)
+};
+
+if(settings.birthdate) $('birthdate').value = settings.birthdate;
+$('starttime').value = settings.starttime;
+$('startage').value = settings.startage;
+$('lifeexpect').value = settings.lifeexpect;
+
+/* compute total hours from age range */
+function hoursBetweenAges(startAge, endAge){
+  const years = endAge - startAge;
+  return years * 365.25 * 24;
+}
+
+/* Derive total hours: if birthdate provided, compute exact hours until lifeexpect */
+function computeTotalHours(){
+  if(settings.birthdate){
+    const bd = new Date(settings.birthdate + 'T00:00:00');
+    const end = new Date(bd);
+    end.setFullYear(bd.getFullYear() + Number(settings.lifeexpect));
+    const ageStartDate = new Date(bd);
+    ageStartDate.setFullYear(bd.getFullYear() + Number(settings.startage));
+    const ms = end - ageStartDate;
+    return ms / (1000*60*60);
+  } else {
+    return hoursBetweenAges(settings.startage, settings.lifeexpect);
+  }
+}
+
+/* Start point: today at settings.starttime (or if past, use that day) */
+function computeStartDate(){
+  const parts = settings.starttime.split(':');
+  const d = new Date();
+  d.setHours(Number(parts[0]), Number(parts[1]), 0, 0);
+  return d;
+}
+
+/* State tracking for transaction history */
+let lastLoggedHourMark = null;
+
+function updateUI(){
+  const now = new Date();
+  const startDate = computeStartDate();
+  // if startDate is in the future (today), allow negative elapsed (countdown not started). We'll treat future as 0 elapsed.
+  let elapsedHours = (now - startDate) / (1000*60*60);
+  if(elapsedHours < 0) elapsedHours = 0;
+
+  const totalHours = computeTotalHours();
+  const hoursLeft = Math.max(totalHours - elapsedHours, 0);
+
+  const wholeHours = Math.floor(hoursLeft);
+  const minutes = Math.floor((hoursLeft - wholeHours) * 60);
+  const seconds = Math.floor((((hoursLeft - wholeHours) * 60) - minutes) * 60);
+
+  const formatted = `${wholeHours.toLocaleString()}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+  $('balance').textContent = formatted;
+
+  // Today's burn: hours since midnight
+  const todayStart = new Date(now); todayStart.setHours(0,0,0,0);
+  const todayHours = (now - todayStart) / (1000*60*60);
+  $('todayBurn').textContent = todayHours.toFixed(2) + 'h';
+
+  // Transaction logging: when an hour boundary crosses, log it
+  const hourMark = Math.floor((now - startDate) / (1000*60*60));
+  if(lastLoggedHourMark === null) lastLoggedHourMark = hourMark;
+  if(hourMark > lastLoggedHourMark){
+    lastLoggedHourMark = hourMark;
+    logTransaction(`-1 hour spent (hour #${hourMark}) at ${now.toLocaleString()}`);
+  }
+}
+
+/* transaction history UI */
+function logTransaction(text){
+  const node = document.createElement('div');
+  node.className = 'item';
+  node.textContent = text;
+  const list = $('historyList');
+  list.prepend(node);
+  // persist last few
+  const items = Array.from(list.querySelectorAll('.item')).slice(0,80).map(n=>n.textContent);
+  localStorage.setItem('lifebank_history', JSON.stringify(items));
+}
+
+/* restore history from storage */
+(function restoreHistory(){
+  const stored = JSON.parse(localStorage.getItem('lifebank_history') || 'null');
+  if(stored && stored.length){
+    $('historyList').innerHTML = '';
+    stored.forEach(t => {
+      const n = document.createElement('div'); n.className='item'; n.textContent = t;
+      $('historyList').appendChild(n);
+    });
+  }
+})();
+
+/* Ticker */
+let timer = null;
+function startTicker(){
+  if(timer) return;
+  timer = setInterval(()=>{ if(!paused) updateUI(); }, 1000);
+  updateUI();
+}
+function stopTicker(){
+  clearInterval(timer); timer = null;
+}
+
+/* Settings controls */
+$('settingsToggle').addEventListener('click', ()=> {
+  $('settings').style.display = $('settings').style.display === 'none' ? 'block' : 'none';
+});
+$('cancelSettings').addEventListener('click', ()=> $('settings').style.display = 'none');
+$('saveSettings').addEventListener('click', ()=>{
+  settings.birthdate = $('birthdate').value;
+  settings.starttime = $('starttime').value;
+  settings.startage = Number($('startage').value || 31);
+  settings.lifeexpect = Number($('lifeexpect').value || 100);
+  localStorage.setItem('lifebank_v1', JSON.stringify(settings));
+  $('settings').style.display = 'none';
+  // reset transaction logging
+  lastLoggedHourMark = null;
+  logTransaction('Settings saved — tracker reset');
+  updateUI();
+});
+
+/* pause / reset */
+$('pauseBtn').addEventListener('click', ()=>{
+  paused = !paused;
+  $('pauseBtn').textContent = paused ? 'Resume Ticker' : 'Pause Ticker';
+});
+$('resetBtn').addEventListener('click', ()=>{
+  // reset start time to today at settings.starttime
+  lastLoggedHourMark = null;
+  logTransaction('Start reset to ' + computeStartDate().toLocaleString());
+});
+
+/* click to copy balance */
+$('balance').addEventListener('click', async ()=>{
+  const txt = $('balance').textContent;
+  try{
+    await navigator.clipboard.writeText(txt);
+    logTransaction('Copied balance: ' + txt);
+  }catch(e){ logTransaction('Copied (manual) ' + txt); }
+});
+
+/* share button */
+$('shareBtn').addEventListener('click', ()=>{
+  const txt = `My Life Bank: ${$('balance').textContent} — try the Life Bank app`;
+  if(navigator.share) navigator.share({title:'Life Bank', text:txt, url:location.href}).catch(()=>{});
+  else prompt('Share this link', location.href);
+});
+
+/* PWA install flow hook */
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();
+  installPromptEvent = e;
+  $('installBtn').style.display = 'inline-block';
+});
+$('installBtn').addEventListener('click', async ()=>{
+  if(!installPromptEvent) return;
+  installPromptEvent.prompt();
+  const choice = await installPromptEvent.userChoice;
+  if(choice.outcome === 'accepted') logTransaction('App installed');
+  installPromptEvent = null;
+  $('installBtn').style.display = 'none';
+});
+
+/* register service worker for offline */
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>console.warn('SW register failed'));
+}
+
+/* start */
+startTicker();
+updateUI();
+</script>
+</body>
+</html>
