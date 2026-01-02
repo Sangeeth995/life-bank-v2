@@ -1,92 +1,88 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Life Bank</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Life Bank</title>
 
-  <link rel="manifest" href="manifest.json">
+<style>
+  body {
+    margin: 0;
+    background: radial-gradient(circle at top, #111 0%, #050505 60%);
+    color: #ffffff;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    padding: 20px;
+    box-sizing: border-box;
+  }
 
-  <style>
-    body {
-      margin: 0;
-      background: radial-gradient(circle at top, #111 0%, #050505 60%);
-      color: #eaeaea;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      padding: 20px;
-      box-sizing: border-box;
-    }
-    .card {
-      width: min(600px, 100%);
-      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.015));
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 22px;
-      padding: 28px;
-      box-shadow: 0 30px 80px rgba(0,0,0,0.6);
-      text-align: center;
-    }
-    .label {
-      font-size: 11px;
-      color: #8a8a8a;
-      letter-spacing: 4px;
-      text-transform: uppercase;
-    }
-    .balance {
-      margin-top: 16px;
-      font-size: 58px;
-      font-weight: 800;
-      letter-spacing: 1px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      color: #ffffff;
-      text-shadow: 0 0 24px rgba(245,199,107,0.22);
-    }
-    .summary {
-      margin-top: 18px;
-      font-size: 14px;
-      color: #bfbfbf;
-    }
-    .summary strong { color: #4ade80; font-weight: 600; }
-    .row {
-      margin-top: 22px;
-      display: flex;
-      gap: 12px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-    button {
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.08);
-      color: #cfcfcf;
-      padding: 11px 16px;
-      border-radius: 14px;
-      font-size: 13px;
-    }
-    button.primary {
-      background: linear-gradient(180deg, rgba(245,199,107,0.28), rgba(245,199,107,0.12));
-      border-color: rgba(245,199,107,0.45);
-      color: #ffffff;
-    }
-  </style>
+  .card {
+    width: min(620px, 100%);
+    background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.015));
+    border-radius: 22px;
+    padding: 30px;
+    text-align: center;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+  }
+
+  .label {
+    font-size: 11px;
+    color: #8a8a8a;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+  }
+
+  .balance {
+    margin-top: 18px;
+    font-size: 58px;
+    font-weight: 800;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: #ffffff;
+    text-shadow: 0 0 26px rgba(245,199,107,0.22);
+    transition: transform 0.25s ease, text-shadow 0.25s ease;
+  }
+
+  .pulse {
+    transform: scale(1.015);
+  }
+
+  .summary {
+    margin-top: 18px;
+    font-size: 14px;
+    color: #bfbfbf;
+  }
+
+  .summary strong {
+    color: #4ade80;
+    font-weight: 600;
+  }
+
+  .reflection {
+    margin-top: 14px;
+    font-size: 13px;
+    color: #9a9a9a;
+    font-style: italic;
+  }
+</style>
 </head>
+
 <body>
 
-  <div class="card">
-    <div class="label">Life Balance</div>
-    <div class="balance" id="balance">--:--:--</div>
+<div class="card">
+  <div class="label">Life Balance</div>
+  <div class="balance" id="balance">--:--:--</div>
 
-    <div class="summary" id="summary">
-      Today you spent <strong>0.00</strong> hours
-    </div>
-
-    <div class="row">
-      <button id="pauseBtn">Pause</button>
-      <button class="primary" id="resetBtn">Reset to 8:00 PM</button>
-    </div>
+  <div class="summary" id="summary">
+    Today you spent <strong>0.00</strong> hours
   </div>
+
+  <div class="reflection" id="reflection">
+    Make the remaining hours count.
+  </div>
+</div>
 
 <script>
   const startAge = 31;
@@ -101,12 +97,12 @@
   let startTime = getStartTimeToday();
   const totalLifeHours = (lifeExpectancy - startAge) * 365.25 * 24;
 
-  let paused = false;
+  let lastHour = null;
+  let lastSecond = null;
 
   function updateBalance() {
-    if (paused) return;
-
     const now = new Date();
+
     let elapsedMs = now - startTime;
     if (elapsedMs < 0) elapsedMs = 0;
 
@@ -118,36 +114,49 @@
     const m = Math.floor((remaining - h) * 60);
     const s = Math.floor((((remaining - h) * 60) - m) * 60);
 
-    document.getElementById("balance").textContent =
+    const balanceEl = document.getElementById("balance");
+    balanceEl.textContent =
       h.toLocaleString() + ":" +
       String(m).padStart(2, "0") + ":" +
       String(s).padStart(2, "0");
 
+    // Gentle second pulse
+    if (s !== lastSecond) {
+      balanceEl.classList.add("pulse");
+      setTimeout(() => balanceEl.classList.remove("pulse"), 180);
+      lastSecond = s;
+    }
+
+    // Hour-change glow (life currency spent)
+    if (h !== lastHour) {
+      balanceEl.style.textShadow = "0 0 40px rgba(74,222,128,0.5)";
+      setTimeout(() => {
+        balanceEl.style.textShadow = "0 0 26px rgba(245,199,107,0.22)";
+      }, 600);
+      lastHour = h;
+    }
+
+    // Daily summary
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
     const hoursToday = (now - startOfDay) / (1000 * 60 * 60);
 
     document.getElementById("summary").innerHTML =
       `Today you spent <strong>${hoursToday.toFixed(2)}</strong> hours`;
+
+    // End-of-day reflection
+    const reflection = document.getElementById("reflection");
+    if (now.getHours() >= 22) {
+      reflection.textContent = "The day is ending. Did it matter?";
+    } else if (now.getHours() >= 18) {
+      reflection.textContent = "Evenings decide the direction of days.";
+    } else {
+      reflection.textContent = "Make the remaining hours count.";
+    }
   }
-
-  document.getElementById("pauseBtn").addEventListener("click", () => {
-    paused = !paused;
-    document.getElementById("pauseBtn").textContent = paused ? "Resume" : "Pause";
-    if (!paused) updateBalance();
-  });
-
-  document.getElementById("resetBtn").addEventListener("click", () => {
-    startTime = getStartTimeToday();
-    updateBalance();
-  });
 
   setInterval(updateBalance, 1000);
   updateBalance();
-
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./sw.js");
-  }
 </script>
 
 </body>
