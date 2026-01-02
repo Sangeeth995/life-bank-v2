@@ -22,6 +22,7 @@
   .card {
     width: min(620px, 100%);
     background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.015));
+    border: 1px solid rgba(255,255,255,0.08);
     border-radius: 22px;
     padding: 30px;
     text-align: center;
@@ -43,6 +44,7 @@
     color: #ffffff;
     text-shadow: 0 0 26px rgba(245,199,107,0.22);
     transition: transform 0.25s ease, text-shadow 0.25s ease;
+    user-select: none;
   }
 
   .pulse {
@@ -66,6 +68,40 @@
     color: #9a9a9a;
     font-style: italic;
   }
+
+  .row {
+    margin-top: 22px;
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  button {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: #cfcfcf;
+    padding: 11px 16px;
+    border-radius: 14px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.06s ease;
+  }
+
+  button:hover { background: rgba(255,255,255,0.07); }
+  button:active { transform: scale(0.98); }
+
+  button.primary {
+    background: linear-gradient(180deg, rgba(245,199,107,0.28), rgba(245,199,107,0.12));
+    border-color: rgba(245,199,107,0.45);
+    color: #ffffff;
+  }
+
+  .hint {
+    margin-top: 12px;
+    font-size: 12px;
+    color: #7a7a7a;
+  }
 </style>
 </head>
 
@@ -82,9 +118,17 @@
   <div class="reflection" id="reflection">
     Make the remaining hours count.
   </div>
+
+  <div class="row">
+    <button id="pauseBtn">Pause</button>
+    <button class="primary" id="resetBtn">Reset to 8:00 PM</button>
+  </div>
+
+  <div class="hint">Tip: tap the balance to copy</div>
 </div>
 
 <script>
+  // SETTINGS
   const startAge = 31;
   const lifeExpectancy = 100;
 
@@ -97,10 +141,11 @@
   let startTime = getStartTimeToday();
   const totalLifeHours = (lifeExpectancy - startAge) * 365.25 * 24;
 
+  let paused = false;
   let lastHour = null;
   let lastSecond = null;
 
-  function updateBalance() {
+  function render() {
     const now = new Date();
 
     let elapsedMs = now - startTime;
@@ -127,7 +172,7 @@
       lastSecond = s;
     }
 
-    // Hour-change glow (life currency spent)
+    // Hour-change glow
     if (h !== lastHour) {
       balanceEl.style.textShadow = "0 0 40px rgba(74,222,128,0.5)";
       setTimeout(() => {
@@ -140,23 +185,44 @@
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
     const hoursToday = (now - startOfDay) / (1000 * 60 * 60);
-
     document.getElementById("summary").innerHTML =
       `Today you spent <strong>${hoursToday.toFixed(2)}</strong> hours`;
 
-    // End-of-day reflection
+    // Reflection line
     const reflection = document.getElementById("reflection");
-    if (now.getHours() >= 22) {
-      reflection.textContent = "The day is ending. Did it matter?";
-    } else if (now.getHours() >= 18) {
-      reflection.textContent = "Evenings decide the direction of days.";
-    } else {
-      reflection.textContent = "Make the remaining hours count.";
-    }
+    if (now.getHours() >= 22) reflection.textContent = "The day is ending. Did it matter?";
+    else if (now.getHours() >= 18) reflection.textContent = "Evenings decide the direction of days.";
+    else reflection.textContent = "Make the remaining hours count.";
   }
 
-  setInterval(updateBalance, 1000);
-  updateBalance();
+  function tick() {
+    if (!paused) render();
+  }
+
+  // Buttons
+  document.getElementById("pauseBtn").addEventListener("click", () => {
+    paused = !paused;
+    document.getElementById("pauseBtn").textContent = paused ? "Resume" : "Pause";
+    if (!paused) render();
+  });
+
+  document.getElementById("resetBtn").addEventListener("click", () => {
+    startTime = getStartTimeToday();
+    lastHour = null;
+    lastSecond = null;
+    paused = false;
+    document.getElementById("pauseBtn").textContent = "Pause";
+    render();
+  });
+
+  // Tap balance to copy
+  document.getElementById("balance").addEventListener("click", async () => {
+    const txt = document.getElementById("balance").textContent;
+    try { await navigator.clipboard.writeText(txt); } catch(e) {}
+  });
+
+  setInterval(tick, 1000);
+  render();
 </script>
 
 </body>
